@@ -93,7 +93,7 @@
       </aside>
 
       <!-- Main Content -->
-      <main class="flex-1 p-6">
+      <main class="flex-1 p-6 bg-slate-200">
         <!-- Header -->
         <header class="mb-6 text-center md:text-left">
           <h2 class="text-4xl font-bold text-gray-800">
@@ -157,7 +157,7 @@
             <canvas id="salinityChart" class="mt-4"></canvas>
           </div>
           <!-- pH Card -->
-          <div
+          <!-- <div
             class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition"
           >
             <div class="flex items-center justify-between">
@@ -166,6 +166,16 @@
             </div>
             <p class="text-gray-700 text-5xl font-semibold mt-2">7.2</p>
             <canvas id="pHChart" class="mt-4"></canvas>
+          </div> -->
+          <div
+            class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition"
+          >
+            <div class="flex items-center justify-between">
+              <h3 class="text-2xl font-bold text-purple-500">pH</h3>
+              <i class="fas fa-flask text-purple-500 text-3xl"></i>
+            </div>
+            <p class="text-gray-700 text-5xl font-semibold mt-2">7.2</p>
+            <canvas id="rangeAreaChart" class="mt-4"></canvas>
           </div>
         </div>
       </main>
@@ -193,54 +203,166 @@
         }
       });
 
-      // Temperature Chart
+      // Temperature Chart - Range Area
       new Chart(document.getElementById("tempChart"), {
         type: "line",
         data: {
-          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
           datasets: [
             {
-              label: "Suhu (°C)",
-              data: [24, 25, 26, 27, 28, 26],
-              borderColor: "#3b82f6",
-              borderWidth: 2,
+              label: "Min Temperature",
+              data: [22, 22.5, 23, 23.5, 24, 24.5, 25], // Batas bawah suhu
+              borderColor: "rgba(59, 130, 246, 1)",
+              backgroundColor: "rgba(59, 130, 246, 0.3)", // Warna isi area suhu
+              fill: "start",
+              tension: 0.4,
+            },
+            {
+              label: "Max Temperature",
+              data: [27, 27.5, 28, 28.5, 29.5, 30.5, 32], // Batas atas suhu
+              borderColor: "rgba(59, 130, 246, 1)",
+              backgroundColor: "rgba(59, 130, 246, 0.3)", // Warna isi area suhu
+              fill: "-1", // Isi area antara dua dataset
               tension: 0.4,
             },
           ],
         },
+        options: {
+          plugins: {
+            legend: {
+              display: false,
+              position: "top",
+            },
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false,
+              },
+              title: {
+                display: true,
+                text: "Days of the Week",
+              },
+            },
+            y: {
+              grid: {
+                display: true,
+              },
+              title: {
+                display: true,
+                text: "Temperature (°C)",
+              },
+            },
+          },
+        },
       });
 
-      // Salinity Chart
+      // Salinity Chart - Range Area
       new Chart(document.getElementById("salinityChart"), {
         type: "line",
         data: {
-          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
           datasets: [
             {
-              label: "Salinitas (ppt)",
-              data: [30, 31, 33, 32, 30, 29],
-              borderColor: "#10b981",
-              borderWidth: 2,
+              label: "Min Salinity",
+              data: [28, 29, 28.5, 30, 30.5, 29, 28.7], // Batas bawah salinitas
+              borderColor: "rgba(16, 185, 129, 1)",
+              backgroundColor: "rgba(16, 185, 129, 0.3)", // Warna isi area salinitas
+              fill: "start",
+              tension: 0.4,
+            },
+            {
+              label: "Max Salinity",
+              data: [32, 33, 32.5, 34, 33.5, 32, 31.7], // Batas atas salinitas
+              borderColor: "rgba(16, 185, 129, 1)",
+              backgroundColor: "rgba(16, 185, 129, 0.3)", // Warna isi area salinitas
+              fill: "-1",
               tension: 0.4,
             },
           ],
         },
+        options: {
+          plugins: {
+            legend: {
+              display: false,
+              position: "top",
+            },
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false,
+              },
+              title: {
+                display: true,
+                text: "Days of the Week",
+              },
+            },
+            y: {
+              grid: {
+                display: true,
+              },
+              title: {
+                display: true,
+                text: "Salinity (ppt)",
+              },
+            },
+          },
+        },
       });
 
-      // pH Chart
-      new Chart(document.getElementById("pHChart"), {
+      const ctx = document.getElementById("rangeAreaChart").getContext("2d");
+
+      new Chart(ctx, {
         type: "line",
         data: {
-          labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+          labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
           datasets: [
             {
-              label: "pH",
-              data: [7, 7.2, 7.5, 7.1, 7, 7.3],
-              borderColor: "#8b5cf6",
-              borderWidth: 2,
+              label: "Start Sales",
+              data: [6, 6.5, 6.2, 6.3, 6.8, 7, 6.4], // Batas bawah
+              borderColor: "black",
+              backgroundColor: "rgba(128, 128, 128, 0.3)", // Warna isi area
+              fill: "start",
+              tension: 0.4, // Membuat garis melengkung
+            },
+            {
+              label: "End Sales",
+              data: [7.5, 7.2, 7.7, 8, 7.6, 7.1, 7.3], // Batas atas
+              borderColor: "black",
+              backgroundColor: "rgba(128, 128, 128, 0.3)", // Warna isi area
+              fill: "-1", // Isi area antara dua dataset
               tension: 0.4,
             },
           ],
+        },
+        options: {
+          plugins: {
+            legend: {
+              display: false,
+              position: "top",
+            },
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false,
+              },
+              title: {
+                display: true,
+                text: "Days of the Week",
+              },
+            },
+            y: {
+              grid: {
+                display: true,
+              },
+              title: {
+                display: true,
+                text: "pH Value",
+              },
+            },
+          },
         },
       });
     </script>
