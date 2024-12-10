@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SeaGrow - Kontrol Otomatis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+  <body class="bg-gradient-to-r from-blue-50 to-green-50 font-sans tracking-normal">
+    <div class="flex flex-col md:flex-row min-h-screen">
+      <!-- Sidebar -->
+      <aside class="w-full md:w-64 bg-teal-600 text-white md:flex md:flex-col">
+        <div class="flex items-center justify-between px-6 py-4 md:hidden">
+          <h1 class="text-3xl font-bold">SeaGrow</h1>
+          <button id="hamburgerButton" class="text-white focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+          </button>
+        </div>
+        <nav id="mobileMenu" class="hidden origin-top transform md:block flex-1">
+          <div class="px-6 py-4 text-center">
+            <img src="src/logo.png" alt="SeaGrow Logo" class="mx-auto rounded-full mb-4" />
+            <h2 class="text-2xl font-bold">SeaGrow</h2>
+            <p class="text-sm">Sistem Monitoring Budidaya</p>
+          </div>
+          <ul class="mt-6">
+            <li>
+              <a href="/monitoring" class="block px-6 py-3 hover:bg-teal-700 transition text-white font-semibold">
+                Monitoring
+              </a>
+            </li>
+            <li>
+              <a href="/control" class="block px-6 py-3 bg-teal-700 text-white font-semibold hover:bg-teal-800 transition">
+                Kontrol
+              </a>
+            </li>
+            <li>
+              <a href="/input_schedule" class="block px-6 py-3 hover:bg-teal-700 transition text-white font-semibold">
+                Input Jadwal
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <footer class="hidden md:block px-6 py-4 text-xs">
+          <p>© 2024 SeaGrow</p>
+        </footer>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="flex-1 p-6 bg-slate-200">
+        <!-- Header -->
+        <header class="mb-6 text-center md:text-left">
+          <h2 class="text-4xl font-bold text-gray-800">Kontrol Otomatis</h2>
+          <p class="text-lg text-gray-600">Atur parameter tambak sesuai kebutuhan Anda.</p>
+        </header>
+
+        <!-- Warning and Harvest Button -->
+        <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-4">
+          <button id="harvestButton" class="hidden px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition shadow-md text-sm font-semibold">
+            Gerakkan Katrol Otomatis
+          </button>
+          <div id="warningMessage" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow-md text-sm w-full">
+            <p class="font-bold">Peringatan:</p>
+            <p>Suhu, salinitas, dan pH belum sesuai untuk panen. Pastikan Anda yakin sebelum melanjutkan proses panen.</p>
+          </div>
+          <div id="successMessage" class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md shadow-md text-sm w-full">
+            <p class="font-bold">Sukses:</p>
+            <p>Kondisi tambak sudah sangat ideal dan siap untuk panen.</p>
+          </div>
+        </div>
+
+        <!-- Control Form -->
+        <form id="controlForm" class="space-y-6 bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition mt-6">
+          <div>
+            <label for="temperature" class="block text-gray-700 text-lg font-semibold">Target Suhu (°C):</label>
+            <input type="number" id="temperature" name="temperature" placeholder="22 - 32°C" min="22" max="32" step="0.1"
+              class="mt-2 w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div>
+            <label for="salinity" class="block text-gray-700 text-lg font-semibold">Target Salinitas (ppt):</label>
+            <input type="number" id="salinity" name="salinity" placeholder="28 - 34 ppt" min="28" max="34" step="0.1"
+              class="mt-2 w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" />
+          </div>
+          <div>
+            <label for="acidity" class="block text-gray-700 text-lg font-semibold">Target pH:</label>
+            <input type="number" id="acidity" name="acidity" placeholder="6 - 8" min="6" max="8" step="0.1"
+              class="mt-2 w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" />
+          </div>
+          <div>
+            <button type="submit" class="w-full py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition duration-200">
+              Update Pengaturan
+            </button>
+          </div>
+        </form>
+      </main>
+    </div>
+
+    <script>
+      // Get current parameters on page load
+      fetch('/api/parameters')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('temperature').value = data.temperature;
+          document.getElementById('salinity').value = data.salinity;
+          document.getElementById('acidity').value = data.acidity;
+          checkConditions(data);
+        });
+
+      // Handle form submission
+      document.getElementById('controlForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const data = {
+          temperature: parseFloat(document.getElementById('temperature').value),
+          salinity: parseFloat(document.getElementById('salinity').value),
+          acidity: parseFloat(document.getElementById('acidity').value)
+        };
+
+        fetch('/api/parameters', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+          Swal.fire({
+            title: 'Berhasil!',
+            text: 'Parameter berhasil diperbarui.',
+            icon: 'success'
+          });
+          checkConditions(data.data);
+        })
+        .catch(error => {
+          Swal.fire({
+            title: 'Error!',
+            text: 'Gagal memperbarui parameter.',
+            icon: 'error'
+          });
+        });
+      });
+
+      // Check conditions and show appropriate messages
+      function checkConditions(data) {
+        const harvestButton = document.getElementById('harvestButton');
+        const warningMessage = document.getElementById('warningMessage');
+        const successMessage = document.getElementById('successMessage');
+        
+        const tempOk = data.temperature >= 24 && data.temperature <= 27;
+        const salinityOk = data.salinity >= 28 && data.salinity <= 34;
+        const acidityOk = data.acidity >= 6.5 && data.acidity <= 7.5;
+
+        harvestButton.classList.remove('hidden');
+        
+        if (tempOk && salinityOk && acidityOk) {
+          warningMessage.classList.add('hidden');
+          successMessage.classList.remove('hidden');
+        } else {
+          warningMessage.classList.remove('hidden');
+          successMessage.classList.add('hidden');
+        }
+      }
+
+      // Handle harvest button click
+      document.getElementById('harvestButton').addEventListener('click', () => {
+        const successMessage = document.getElementById('successMessage');
+        const isIdeal = !successMessage.classList.contains('hidden');
+
+        if (!isIdeal) {
+          Swal.fire({
+            title: 'Peringatan!',
+            text: 'Suhu, salinitas, dan pH belum sesuai. Apakah Anda yakin ingin melanjutkan proses panen?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Lanjutkan',
+            cancelButtonText: 'Batal'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              Swal.fire('Berhasil!', 'Katrol otomatis sedang bergerak untuk proses panen.', 'success');
+            }
+          });
+        } else {
+          Swal.fire('Berhasil!', 'Katrol otomatis sedang bergerak untuk proses panen.', 'success');
+        }
+      });
+
+      // Mobile menu toggle
+      const hamburgerButton = document.getElementById('hamburgerButton');
+      const mobileMenu = document.getElementById('mobileMenu');
+
+      hamburgerButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SeaGrow - Monitoring</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body class="bg-gradient-to-r from-blue-50 to-green-50 font-sans tracking-normal">
+    <div class="flex flex-col md:flex-row min-h-screen">
+      <!-- Sidebar -->
+      <aside class="w-full md:w-64 bg-teal-600 text-white md:flex md:flex-col">
+        <div class="flex items-center justify-between px-6 py-4 md:hidden">
+          <h1 class="text-3xl font-bold">SeaGrow</h1>
+          <button id="hamburgerButton" class="text-white focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+          </button>
+        </div>
+        <nav id="mobileMenu" class="hidden origin-top transform md:block flex-1">
+          <div class="px-6 py-4 text-center">
+            <img src="src/logo.png" alt="SeaGrow Logo" class="mx-auto rounded-full mb-4" />
+            <h2 class="text-2xl font-bold">SeaGrow</h2>
+            <p class="text-sm">Sistem Monitoring Budidaya</p>
+          </div>
+          <ul class="mt-6">
+            <li>
+              <a href="/monitoring" class="block px-6 py-3 bg-teal-700 text-white font-semibold hover:bg-teal-800 transition">
+                Monitoring
+              </a>
+            </li>
+            <li>
+              <a href="/control" class="block px-6 py-3 hover:bg-teal-700 transition text-white font-semibold">
+                Kontrol
+              </a>
+            </li>
+            <li>
+              <a href="/input_schedule" class="block px-6 py-3 hover:bg-teal-700 transition text-white font-semibold">
+                Input Jadwal
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <footer class="hidden md:block px-6 py-4 text-xs">
+          <p>© 2024 SeaGrow</p>
+        </footer>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="flex-1 p-6 bg-slate-200">
+        <!-- Header -->
+        <header class="mb-6 text-center md:text-left">
+          <h2 class="text-4xl font-bold text-gray-800">Monitoring Sistem Budidaya</h2>
+          <p class="text-lg text-gray-600">Pantau kondisi tambak Anda secara real-time.</p>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+          <div class="bg-blue-500 text-white p-4 rounded-lg shadow-lg text-center">
+            <h3 id="temp-value" class="text-xl font-bold">--°C</h3>
+            <p class="mt-2">Suhu</p>
+          </div>
+          <div class="bg-green-500 text-white p-4 rounded-lg shadow-lg text-center">
+            <h3 id="salinity-value" class="text-xl font-bold">-- ppt</h3>
+            <p class="mt-2">Salinitas</p>
+          </div>
+          <div class="bg-purple-500 text-white p-4 rounded-lg shadow-lg text-center">
+            <h3 id="acidity-value" class="text-xl font-bold">--</h3>
+            <p class="mt-2">pH</p>
+          </div>
+          <div id="status-card" class="bg-teal-500 text-white p-4 rounded-lg shadow-lg text-center">
+            <h3 id="status-value" class="text-xl font-bold">--</h3>
+            <p class="mt-2">Status Tambak</p>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid gap-6 grid-cols-1 md:grid-cols-2">
+          <div class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+              <h3 class="text-2xl font-bold text-blue-500">Suhu</h3>
+            </div>
+            <canvas id="tempChart" class="mt-4"></canvas>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+              <h3 class="text-2xl font-bold text-green-500">Salinitas</h3>
+            </div>
+            <canvas id="salinityChart" class="mt-4"></canvas>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition">
+            <div class="flex items-center justify-between">
+              <h3 class="text-2xl font-bold text-purple-500">pH</h3>
+            </div>
+            <canvas id="acidityChart" class="mt-4"></canvas>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      
+      // Initialize charts data
+      const maxDataPoints = 20;
+      const chartData = {
+        temperature: [],
+        salinity: [],
+        acidity: [],
+        labels: []
+      };
+
+      // Create charts
+      const tempChart = new Chart(document.getElementById('tempChart'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Temperature (°C)',
+            data: [],
+            borderColor: 'rgb(59, 130, 246)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: false,
+              suggestedMin: 20,
+              suggestedMax: 35
+            }
+          }
+        }
+      });
+
+      const salinityChart = new Chart(document.getElementById('salinityChart'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Salinity (ppt)',
+            data: [],
+            borderColor: 'rgb(34, 197, 94)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: false,
+              suggestedMin: 25,
+              suggestedMax: 35
+            }
+          }
+        }
+      });
+
+      const acidityChart = new Chart(document.getElementById('acidityChart'), {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'pH Level',
+            data: [],
+            borderColor: 'rgb(168, 85, 247)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: false,
+              suggestedMin: 5,
+              suggestedMax: 9
+            }
+          }
+        }
+      });
+
+      // Updated function to fetch historical data
+      async function fetchChartData() {
+        try {
+          const response = await fetch('/api/sensor_history');
+          const data = await response.json();
+          
+          // Update chart data arrays
+          const timestamps = data.timestamp.slice(0, maxDataPoints);
+          const temperatures = data.temperature.slice(0, maxDataPoints);
+          const salinities = data.salinity.slice(0, maxDataPoints);
+          const acidities = data.acidity.slice(0, maxDataPoints);
+          
+          // Update charts
+          tempChart.data.labels = timestamps;
+          tempChart.data.datasets[0].data = temperatures;
+          tempChart.update();
+
+          salinityChart.data.labels = timestamps;
+          salinityChart.data.datasets[0].data = salinities;
+          salinityChart.update();
+
+          acidityChart.data.labels = timestamps;
+          acidityChart.data.datasets[0].data = acidities;
+          acidityChart.update();
+        } catch (error) {
+          console.error('Error fetching chart data:', error);
+        }
+      }
+
+      // Updated function to fetch current metrics
+      async function fetchMetricData() {
+        try {
+          const response = await fetch('/api/parameters');
+          const data = await response.json();
+          
+          // Update metric cards
+          document.getElementById('temp-value').textContent = `${data.temperature.toFixed(1)}°C`;
+          document.getElementById('salinity-value').textContent = `${data.salinity.toFixed(1)} ppt`;
+          document.getElementById('acidity-value').textContent = data.acidity.toFixed(1);
+          
+          updateStatus(data);
+        } catch (error) {
+          console.error('Error fetching metric data:', error);
+        }
+      }
+
+      // Fetch data initially and set intervals
+      fetchChartData();
+      fetchMetricData();
+      setInterval(fetchChartData, 3000);
+      setInterval(fetchMetricData, 3000);
+
+      // Update status based on parameters
+      function updateStatus(data) {
+        const tempOk = data.temperature >= 24 && data.temperature <= 27;
+        const salinityOk = data.salinity >= 28 && data.salinity <= 34;
+        const acidityOk = data.acidity >= 6.5 && data.acidity <= 7.5;
+
+        const statusCard = document.getElementById('status-card');
+        const statusValue = document.getElementById('status-value');
+
+        if (tempOk && salinityOk && acidityOk) {
+          statusValue.textContent = 'Optimal';
+          statusCard.className = 'bg-teal-500 text-white p-4 rounded-lg shadow-lg text-center';
+        } else {
+          statusValue.textContent = 'Perlu Perhatian';
+          statusCard.className = 'bg-yellow-500 text-white p-4 rounded-lg shadow-lg text-center';
+        }
+      }
+
+      // Mobile menu toggle
+      const hamburgerButton = document.getElementById('hamburgerButton');
+      const mobileMenu = document.getElementById('mobileMenu');
+
+      hamburgerButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+    </script>
+  </body>
+</html>

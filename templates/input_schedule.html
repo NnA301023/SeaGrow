@@ -38,7 +38,7 @@
         >
           <div class="px-6 py-4 text-center">
             <img
-              src="https://via.placeholder.com/100"
+              src="src/logo.png"
               alt="SeaGrow Logo"
               class="mx-auto rounded-full mb-4"
             />
@@ -48,7 +48,7 @@
           <ul class="mt-6">
             <li>
               <a
-                href="monitoring.html"
+                href="/monitoring"
                 class="block px-6 py-3 hover:bg-teal-700 transition text-white font-semibold"
               >
                 Monitoring
@@ -56,7 +56,7 @@
             </li>
             <li>
               <a
-                href="control.html"
+                href="/control"
                 class="block px-6 py-3 hover:bg-teal-700 transition text-white font-semibold"
               >
                 Kontrol
@@ -64,7 +64,7 @@
             </li>
             <li>
               <a
-                href="input_schedule.html"
+                href="/input_schedule"
                 class="block px-6 py-3 bg-teal-700 text-white font-semibold hover:bg-teal-800 transition"
               >
                 Input Jadwal
@@ -127,10 +127,10 @@
             <p class="font-bold">Rekomendasi:</p>
             <p>
               Sudah hari ke-30! Periksa suhu, salinitas, dan pH di halaman
-              <a href="monitoring.html" class="text-teal-600 underline"
+              <a href="/monitoring" class="text-teal-600 underline"
                 >Monitoring</a
               >. Jika parameter sudah sesuai, lakukan panen di halaman
-              <a href="control.html" class="text-teal-600 underline">Kontrol</a
+              <a href="/control" class="text-teal-600 underline">Kontrol</a
               >.
             </p>
           </div>
@@ -187,161 +187,158 @@
 
     <!-- Script -->
     <script>
-      const scheduleTable = document.getElementById("scheduleTable");
-      const prevPageButton = document.getElementById("prevPage");
-      const nextPageButton = document.getElementById("nextPage");
-      const currentPageDisplay = document.getElementById("currentPage");
-      const notification = document.getElementById("notification");
-      const resetButton = document.getElementById("resetButton");
-      const currentTime = document.getElementById("currentTime");
-
-      let scheduleStartDate;
-      let rows = []; // Holds all rows of the table
+      // Initialize variables
       let currentPage = 1;
       const rowsPerPage = 10;
+      let allSchedules = [];
 
-      // Real-time clock
+      // Update real-time clock
       function updateTime() {
         const now = new Date();
-        const formattedTime = now.toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
+        const formattedTime = now.toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
         });
-        currentTime.textContent = `Waktu Saat Ini: ${formattedTime}`;
+        document.getElementById('currentTime').textContent = `Waktu Saat Ini: ${formattedTime}`;
       }
       setInterval(updateTime, 1000);
+      updateTime();
 
-      // Handle schedule form
-      document
-        .getElementById("scheduleForm")
-        .addEventListener("submit", function (e) {
-          e.preventDefault();
-
-          const inputDate = new Date(
-            document.getElementById("inputDate").value
-          );
-          if (isNaN(inputDate.getTime())) {
-            Swal.fire("Error", "Mohon masukkan tanggal yang valid!", "error");
-            return;
-          }
-
-          scheduleStartDate = inputDate;
-          generateRows();
-          renderTable();
-
-          Swal.fire(
-            "Berhasil!",
-            "Jadwal penyemaian berhasil ditambahkan.",
-            "success"
-          );
-        });
-
-      // Generate rows dynamically
-      function generateRows() {
-        const today = new Date();
-        const daysElapsed =
-          Math.floor((today - scheduleStartDate) / (1000 * 60 * 60 * 24)) + 1;
-        rows = []; // Reset rows
-
-        for (let day = 1; day <= daysElapsed; day++) {
-          const currentDayDate = new Date(scheduleStartDate);
-          currentDayDate.setDate(scheduleStartDate.getDate() + (day - 1));
-
-          const formattedDate = currentDayDate.toLocaleDateString("id-ID", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
+      // Load schedules from API
+      function loadSchedules() {
+        fetch('/api/schedules')
+          .then(response => response.json())
+          .then(data => {
+            allSchedules = data;
+            renderScheduleTable();
+            updatePagination();
           });
-
-          const status =
-            day >= 30
-              ? `<span class="text-green-600 font-bold">Waktu Panen</span>`
-              : "Berjalan";
-
-          rows.push({
-            day,
-            date: formattedDate,
-            status,
-          });
-
-          if (day === 30) showNotification();
-        }
       }
 
-      // Render table with pagination
-      function renderTable() {
-        scheduleTable.innerHTML = ""; // Clear the table
+      // Render schedule table
+      function renderScheduleTable() {
+        const scheduleTable = document.getElementById('scheduleTable');
+        scheduleTable.innerHTML = '';
+
         const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = Math.min(startIndex + rowsPerPage, rows.length);
+        const endIndex = startIndex + rowsPerPage;
+        const currentSchedules = allSchedules.slice(startIndex, endIndex);
 
-        for (let i = startIndex; i < endIndex; i++) {
-          const row = rows[i];
-          scheduleTable.innerHTML += `
-            <tr class="${i % 2 === 0 ? "bg-gray-100" : "bg-white"}">
-              <td class="border px-4 py-2">${row.day}</td>
-              <td class="border px-4 py-2">${row.date}</td>
-              <td class="border px-4 py-2">${row.status}</td>
-            </tr>
-          `;
-        }
-
-        // Update pagination controls
-        prevPageButton.disabled = currentPage === 1;
-        nextPageButton.disabled = endIndex >= rows.length;
-        currentPageDisplay.textContent = `Halaman: ${currentPage}`;
+        currentSchedules.forEach(schedule => {
+          schedule.days.forEach(day => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td class="border px-4 py-2 text-center">${day.day}</td>
+              <td class="border px-4 py-2 text-center">${day.date}</td>
+              <td class="border px-4 py-2 text-center">
+                <span class="px-2 py-1 rounded-full text-sm ${
+                  day.status === 'Ready for Harvest' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-blue-100 text-blue-800'
+                }">
+                  ${day.status}
+                </span>
+              </td>
+            `;
+            scheduleTable.appendChild(row);
+          });
+        });
       }
 
-      // Pagination controls
-      prevPageButton.addEventListener("click", () => {
-        if (currentPage > 1) {
-          currentPage--;
-          renderTable();
-        }
-      });
-
-      nextPageButton.addEventListener("click", () => {
-        if (currentPage * rowsPerPage < rows.length) {
-          currentPage++;
-          renderTable();
-        }
-      });
-
-      // Show notification
-      function showNotification() {
-        notification.classList.remove("hidden");
+      // Update pagination controls
+      function updatePagination() {
+        const totalPages = Math.ceil(allSchedules.length / rowsPerPage);
+        document.getElementById('currentPage').textContent = `Halaman: ${currentPage}`;
+        document.getElementById('prevPage').disabled = currentPage === 1;
+        document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
       }
 
-      // Reset schedule
-      resetButton.addEventListener("click", () => {
+      // Handle form submission
+      document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const startDate = document.getElementById('inputDate').value;
+        
+        fetch('/api/schedules', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ start_date: startDate })
+        })
+        .then(response => response.json())
+        .then(data => {
+          Swal.fire({
+            title: 'Berhasil!',
+            text: 'Jadwal penyemaian berhasil ditambahkan.',
+            icon: 'success'
+          });
+          loadSchedules();
+        })
+        .catch(error => {
+          Swal.fire({
+            title: 'Error!',
+            text: 'Gagal menambahkan jadwal.',
+            icon: 'error'
+          });
+        });
+      });
+
+      // Handle reset button
+      document.getElementById('resetButton').addEventListener('click', function() {
         Swal.fire({
-          title: "Konfirmasi",
-          text: "Apakah Anda yakin ingin mereset jadwal?",
-          icon: "warning",
+          title: 'Apakah Anda yakin?',
+          text: 'Semua jadwal akan dihapus!',
+          icon: 'warning',
           showCancelButton: true,
-          confirmButtonText: "Ya, Reset",
-          cancelButtonText: "Batal",
+          confirmButtonText: 'Ya, Reset',
+          cancelButtonText: 'Batal'
         }).then((result) => {
           if (result.isConfirmed) {
-            rows = [];
-            scheduleStartDate = null;
-            currentPage = 1;
-            renderTable();
-            notification.classList.add("hidden");
-
-            Swal.fire("Berhasil!", "Jadwal berhasil direset.", "success");
+            fetch('/api/schedules', {
+              method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+              Swal.fire('Berhasil!', 'Semua jadwal telah direset.', 'success');
+              loadSchedules();
+            })
+            .catch(error => {
+              Swal.fire('Error!', 'Gagal mereset jadwal.', 'error');
+            });
           }
         });
       });
 
-      // Update table every second
-      setInterval(() => {
-        if (scheduleStartDate) {
-          generateRows();
-          renderTable();
+      // Pagination event handlers
+      document.getElementById('prevPage').addEventListener('click', function() {
+        if (currentPage > 1) {
+          currentPage--;
+          renderScheduleTable();
+          updatePagination();
         }
-      }, 1000);
+      });
+
+      document.getElementById('nextPage').addEventListener('click', function() {
+        const totalPages = Math.ceil(allSchedules.length / rowsPerPage);
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderScheduleTable();
+          updatePagination();
+        }
+      });
+
+      // Mobile menu toggle
+      const hamburgerButton = document.getElementById('hamburgerButton');
+      const mobileMenu = document.getElementById('mobileMenu');
+
+      hamburgerButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+      });
+
+      // Load initial data
+      loadSchedules();
     </script>
   </body>
 </html>

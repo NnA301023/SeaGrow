@@ -1,0 +1,43 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    command: redis-server --appendonly yes --protected-mode no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - redis-network
+
+  # web:
+  #   build: .
+  #   command: ["python", "app.py"]
+  #   ports:
+  #     - "5000:5000"
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - redis-network
+
+  # data_generator:
+  #   build: .
+  #   command: ["python", "data_generator.py"]
+  #   depends_on:
+  #     - redis
+  #   networks:
+  #     - redis-network
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  redis-network:
+    driver: bridge
